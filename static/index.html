@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WiFi连接</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh
+        }
+
+        .wifi-container {
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            width: 300px;
+            text-align: center
+        }
+
+        h2 {
+            color: #333
+        }
+
+        input,
+        select {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            box-sizing: border-box
+        }
+
+        button {
+            background-color: #4caf50;
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer
+        }
+
+        button:hover {
+            background-color: #45a049
+        }
+    </style>
+    <script>
+        stat = document.getElementById("status");
+        function scan() {
+            fetch("/scan").then(r => {
+                if (!r.ok) {
+                    setText("搜索失败，请刷新页面");
+                    throw new Error("request failed");
+                };
+                setText("搜索成功，请选择网络并输入密码");
+                return r.json()
+            }).then(data => {
+                d = document.getElementById("ssid");
+                for (i = 0; i < data.length; i++) {
+                    console.log(data);
+                    e = document.createElement("option");
+                    e.value = data.data[i].ssid;
+                    e.text = data.data[i].ssid;
+                    d.add(e)
+                }
+            })
+        }
+
+        function connect() {
+            var ssid = document.getElementById("ssid").value;
+            var passwd = document.getElementById("pwd").value;
+            var formData = new FormData();
+            formData.append("ssid", ssid);
+            formData.append("pwd", passwd);
+            formData = new URLSearchParams(formData).toString();
+            console.log(formData);
+            setText(`正在尝试连接: ${ssid}`);
+            fetch(`/connect`, {
+                method: "POST",
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+            }   ,
+                body: formData.replaceAll("+", "%20")
+            }).then(r => {
+                if (!r.ok) {
+                    setText("无法连接到网络");
+                    throw new Error("request failed");
+                }
+                return r.json()
+            }).then(data => {
+                if (data.status != 0) {
+                    setText(`连接失败，错误:${data.status} (${data.text})`);              
+                } else {
+                    setText(`连接成功！<br />ssid: ${data.ssid}, IP: ${data.ip_addr}`);
+                }
+            })
+        }
+
+        function setText(text) {
+            document.getElementById("status").innerHTML = text
+        }
+    </script>
+</head>
+
+<body onload="scan()">
+    <div class="wifi-container">
+        <h2>WiFi连接</h2>
+        <div id="status" style="color: gray;">正在搜索</div>
+        <form>
+            <select name="ssid" id="ssid">
+                <option>请选择要连接的网络</option>
+            </select>
+            <input type="password" placeholder="密码" id="pwd" required>
+            <input type="button" value="连接" onclick="connect()"/>
+        </form>
+    </div>
+</body>
+
+</html>
